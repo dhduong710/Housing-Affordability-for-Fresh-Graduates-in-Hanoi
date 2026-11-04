@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+data/requests_experiment/
+data/detail_sample/
+data/raw/20*/

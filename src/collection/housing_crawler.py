@@ -16,8 +16,6 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup, Tag
-from playwright.sync_api import Error as PlaywrightError
-from playwright.sync_api import sync_playwright
 
 
 BASE = "https://batdongsan.com.vn"
@@ -25,6 +23,13 @@ LIST_URL = BASE + "/ban-can-ho-chung-cu-ha-noi/p{page}"
 ROBOTS_URL = BASE + "/robots.txt"
 USER_AGENT = "HousingDataCollection/1.0"
 CARD_SELECTOR = "[data-product-id]"
+
+
+def format_duration(seconds: float) -> str:
+    total = max(0, round(seconds))
+    hours, remainder = divmod(total, 3600)
+    minutes, secs = divmod(remainder, 60)
+    return f"{hours}h {minutes}m {secs}s" if hours else f"{minutes}m {secs}s"
 
 
 class AccessBlocked(RuntimeError):
@@ -356,14 +361,22 @@ def load_saved_pages(run_dir: Path) -> tuple[dict[str, Listing], set[int]]:
 
 
 def crawl(args: argparse.Namespace) -> tuple[Path, list[Listing], dict]:
+    from playwright.sync_api import Error as PlaywrightError
+    from playwright.sync_api import sync_playwright
+
     if args.resume:
         run_dir = args.resume.resolve()
         log = json.loads((run_dir / "collection_log.json").read_text(encoding="utf-8"))
-        if log.get("schema_version") != "0.3":
-            raise RuntimeError("This run uses an incompatible schema and cannot be resumed")
+        if log.get("schema_version") != "0.3" or log.get("transport") not in (None, "playwright.chromium"):
+            raise RuntimeError("Only Playwright runs with a compatible schema can be resumed")
         listings, completed = load_saved_pages(run_dir)
         if log["end_page"] is None and 1 in completed:
             raise RuntimeError("Page 1 was saved before pagination discovery; start a new run")
+        if "active_elapsed_seconds" not in log and log.get("finished_at_utc"):
+            earlier = datetime.fromisoformat(log["started_at_utc"])
+            previous_end = datetime.fromisoformat(log["finished_at_utc"])
+            log["active_elapsed_seconds"] = max(0.0, (previous_end - earlier).total_seconds())
+            log["active_elapsed_source"] = "estimated_from_prior_timestamps"
         log["status"] = "running"
         log.pop("finished_at_utc", None)
     else:
@@ -373,6 +386,7 @@ def crawl(args: argparse.Namespace) -> tuple[Path, list[Listing], dict]:
         log = {
             "run_id": run_id, "started_at_utc": datetime.now(timezone.utc).isoformat(),
             "schema_version": "0.3", "source": BASE,
+            "transport": "playwright.chromium", "active_elapsed_seconds": 0.0,
             "start_page": args.start_page,
             "end_page": None if args.all else args.start_page + args.pages - 1,
             "auto_discover_pages": args.all,
@@ -405,7 +419,9 @@ def crawl(args: argparse.Namespace) -> tuple[Path, list[Listing], dict]:
                 try:
                     for attempt in range(1, 3):
                         try:
+                            fetch_started = time.monotonic()
                             html, status = fetch_page(page, url, args.timeout * 1000)
+                            fetch_seconds = round(time.monotonic() - fetch_started, 3)
                             break
                         except AccessBlocked:
                             raise
@@ -428,7 +444,8 @@ def crawl(args: argparse.Namespace) -> tuple[Path, list[Listing], dict]:
                     for item in rows:
                         listings.setdefault(item.listing_id, item)
                     log["pages"].append({"number": page_number, "url": url,
-                                         "http_status": status, "cards": len(rows)})
+                                         "http_status": status, "cards": len(rows),
+                                         "fetch_seconds": fetch_seconds})
                     log["unique_listings"] = len(listings)
                     save_log(run_dir, log)
                     print(f"Page {page_number}/{log['end_page']}: {len(rows)} cards, {len(listings)} unique IDs", flush=True)
@@ -487,13 +504,33 @@ def main() -> int:
         parser.error("start-page/pages must be positive; delay >= 2; detail-limit >= 0")
     if args.all and args.start_page != 1 and not args.resume:
         parser.error("--all starts at page 1 to discover the final page")
+    invocation_started_at = datetime.now(timezone.utc).isoformat()
+    invocation_started = time.monotonic()
     try:
         run_dir, listings, log = crawl(args)
     except Exception as exc:
         print(f"Could not start collection: {exc}", file=sys.stderr)
         return 1
     write_outputs(run_dir, listings, log)
+    last_elapsed = round(time.monotonic() - invocation_started, 3)
+    log["last_invocation_elapsed_seconds"] = last_elapsed
+    log["active_elapsed_seconds"] = round(log.get("active_elapsed_seconds", 0.0) + last_elapsed, 3)
+    log["finished_at_utc"] = datetime.now(timezone.utc).isoformat()
+    log["wall_elapsed_seconds"] = round(
+        (datetime.fromisoformat(log["finished_at_utc"]) -
+         datetime.fromisoformat(log["started_at_utc"])).total_seconds(), 3
+    )
+    log.setdefault("invocations", []).append({
+        "started_at_utc": invocation_started_at,
+        "finished_at_utc": log["finished_at_utc"],
+        "elapsed_seconds": last_elapsed,
+    })
+    save_log(run_dir, log)
     print(f"Run status: {log['status']}; listings: {len(listings)}; output: {run_dir}")
+    total_label = ("estimated total active time" if log.get("active_elapsed_source")
+                   else "total active time")
+    print(f"Elapsed this invocation: {format_duration(last_elapsed)}; "
+          f"{total_label}: {format_duration(log['active_elapsed_seconds'])}")
     return 0 if log["status"] in ("complete", "partial") else 1
 
 
