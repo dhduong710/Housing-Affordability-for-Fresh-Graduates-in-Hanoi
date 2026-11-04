@@ -1,9 +1,9 @@
 """Collect and enrich a small, deduplicated housing detail sample.
 
 Example from the repository root:
-    python -B src/collection/housing_detail_sample.py --pages 2
+    python -B src/collection/housing_requests_detail_sample.py --pages 2
 
-To sample an existing housing CSV instead, add --input data/raw/RUN_ID/housing_raw.csv.
+To sample the saved housing CSV instead, add --input data/housing_listings_raw.csv.
 
 Each successful detail response is saved immediately. Use --resume RUN_DIR to
 continue after Ctrl+C or a closed terminal. The source CSV is never modified.
@@ -24,7 +24,7 @@ from urllib.parse import urlparse
 
 import requests
 
-from housing_crawler import (
+from housing_common import (
     BASE, LIST_URL, Listing, load_saved_pages, parse_area, parse_cards,
     parse_detail, parse_price, save_log, save_page,
 )
@@ -271,7 +271,7 @@ def run(args: argparse.Namespace) -> tuple[Path, dict]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, help="Optional existing housing_raw.csv; omit to crawl listing pages")
+    parser.add_argument("--input", type=Path, help="Optional existing housing CSV; omit to crawl listing pages")
     parser.add_argument("--pages", type=int, default=2, help="First N result pages (default: 2)")
     parser.add_argument("--resume", type=Path, help="Continue a previous detail-sample run")
     parser.add_argument("--max-details", type=int, help="Fetch at most N new details this time")

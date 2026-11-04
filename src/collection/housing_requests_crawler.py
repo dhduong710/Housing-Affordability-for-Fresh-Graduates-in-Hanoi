@@ -19,7 +19,7 @@ from pathlib import Path
 
 import requests
 
-from housing_crawler import (
+from housing_common import (
     BASE, LIST_URL, ROBOTS_URL, attach_detail, discover_last_page,
     load_saved_pages, parse_cards, save_log, save_page, write_outputs,
 )

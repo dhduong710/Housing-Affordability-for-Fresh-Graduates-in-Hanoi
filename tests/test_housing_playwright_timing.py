@@ -11,24 +11,24 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "collection"))
 
-import housing_crawler
+import housing_playwright_crawler
 
 
 class PlaywrightTimingTests(unittest.TestCase):
     def test_duration_format(self):
-        self.assertEqual(housing_crawler.format_duration(3661), "1h 1m 1s")
+        self.assertEqual(housing_playwright_crawler.format_duration(3661), "1h 1m 1s")
 
     def test_main_records_invocation_and_total_time(self):
         with tempfile.TemporaryDirectory() as directory:
             log = {"status": "complete", "started_at_utc": datetime.now(timezone.utc).isoformat(),
                    "active_elapsed_seconds": 0.0}
             output = io.StringIO()
-            with patch.object(sys, "argv", ["housing_crawler.py"]), \
-                 patch.object(housing_crawler, "crawl", return_value=(Path(directory), [], log)), \
-                 patch.object(housing_crawler, "write_outputs"), \
-                 patch.object(housing_crawler, "save_log"), \
+            with patch.object(sys, "argv", ["housing_playwright_crawler.py"]), \
+                 patch.object(housing_playwright_crawler, "crawl", return_value=(Path(directory), [], log)), \
+                 patch.object(housing_playwright_crawler, "write_outputs"), \
+                 patch.object(housing_playwright_crawler, "save_log"), \
                  contextlib.redirect_stdout(output):
-                result = housing_crawler.main()
+                result = housing_playwright_crawler.main()
         self.assertEqual(result, 0)
         self.assertEqual(len(log["invocations"]), 1)
         self.assertGreaterEqual(log["last_invocation_elapsed_seconds"], 0)
