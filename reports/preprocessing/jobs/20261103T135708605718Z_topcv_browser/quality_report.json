@@ -1,0 +1,114 @@
+{
+  "processed_schema_version": 2,
+  "output_columns": [
+    "job_id",
+    "source",
+    "source_url",
+    "collected_at",
+    "job_title",
+    "company",
+    "location",
+    "experience",
+    "salary_text",
+    "posted_text",
+    "location_normalized",
+    "is_hanoi",
+    "is_multi_location",
+    "experience_min_months",
+    "experience_max_months",
+    "is_entry_level",
+    "salary_min",
+    "salary_max",
+    "salary_currency",
+    "salary_period",
+    "is_eligible"
+  ],
+  "policy_version": "jobs-0-24-months-month-default-v2",
+  "run_id": "20261103T135708605718Z_topcv_browser",
+  "input_file": "data/raw/jobs/20261103T135708605718Z_topcv_browser/jobs_topcv.csv",
+  "input_sha256": "4779f73e4d9e0e0ac75a385d7c8efe6dacdd61e3c71a02e6b32944639fe32b61",
+  "rules_sha256": "95c61b6861722bc08a66dba5062b605d001d3455f8a709280e251a82ac8163e9",
+  "experience_policy": {
+    "interval_months": [
+      0,
+      24
+    ],
+    "match": "nonempty_intersection",
+    "uses_job_title": false
+  },
+  "salary_policy": {
+    "missing_period": "month",
+    "default_period_basis": "project assumption for unspecified listing-card periods",
+    "currency_conversion": false,
+    "topcv_local_money_units": "infer VND",
+    "missing_bound": "null"
+  },
+  "row_counts": {
+    "raw": 11200,
+    "processed": 11200,
+    "dropped": 0,
+    "duplicate_source_job_id_rows": 0,
+    "eligible_hanoi_entry_level": 3881,
+    "salary_numeric": 7806,
+    "eligible_salary_numeric": 3022,
+    "salary_closed_monthly_vnd": 7070,
+    "eligible_salary_closed_monthly_vnd": 2759
+  },
+  "classification": {
+    "is_hanoi": {
+      "true": 4957,
+      "false": 5926,
+      "unknown": 317
+    },
+    "is_multi_location": {
+      "true": 1295,
+      "false": 9905,
+      "unknown": 0
+    },
+    "is_entry_level": {
+      "true": 9095,
+      "false": 2105,
+      "unknown": 0
+    },
+    "is_eligible": {
+      "true": 3881,
+      "false": 7041,
+      "unknown": 278
+    }
+  },
+  "eligible_fraction": 0.346518,
+  "missing_raw": {
+    "job_id": 0,
+    "source": 0,
+    "source_url": 0,
+    "collected_at": 0,
+    "job_title": 0,
+    "company": 0,
+    "location": 0,
+    "experience": 0,
+    "salary_text": 0,
+    "posted_text": 0
+  },
+  "missing_derived": {
+    "location_normalized": 0,
+    "is_hanoi": 317,
+    "is_multi_location": 0,
+    "experience_min_months": 0,
+    "experience_max_months": 2480,
+    "is_entry_level": 0,
+    "salary_min": 3735,
+    "salary_max": 3753,
+    "salary_currency": 3385,
+    "salary_period": 0,
+    "is_eligible": 278
+  },
+  "output_file": "data/processed/jobs/20261103T135708605718Z_topcv_browser_schema_v2/salary_clean.csv",
+  "limitations": [
+    "Eligibility uses the location and experience displayed on listing cards.",
+    "Experience eligibility means a nonempty intersection with 0-24 months.",
+    "A multi-location listing may include Hanoi alongside other workplaces.",
+    "Unspecified salary periods use month; amounts retain the advertised currency and pay basis.",
+    "Analysis requires sample validation, occupation grouping and selection of comparable salary records."
+  ],
+  "output_sha256": "2ccbb5af5d36f8d1967cc68fc68eebb112269b75d0c5910e637f3af8424b9352"
+}
