@@ -2,4 +2,5 @@ __pycache__/
 *.py[cod]
 data/requests_experiment/
 data/detail_sample/
+data/detail_full/
 data/raw/20*/
